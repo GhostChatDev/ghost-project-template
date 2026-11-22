@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nighttail Motion Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,620&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* hallmark: shape study · theme custom (by request) · genre editorial
+   critique: one idea, the ink field. copper is the only signal.
+   waive: 54 labels stay sentence case in Outfit, one step down, untracked. */
+:root {
+  --paper: #F3EDE3;
+  --wash: #E7DDD0;
+  --ink: #1C1915;
+  --muted: #6B6258;
+  --copper: #9A3E24;
+  --copper-deep: #7A2E18;
+  --line: #D4C8B8;
+  --font-display: "Fraunces", "Iowan Old Style", Palatino, serif;
+  --font-body: "Outfit", "Avenir Next", system-ui, sans-serif;
+  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-leave: cubic-bezier(0.3, 0, 1, 1);
+  --ease-on: cubic-bezier(0.2, 0, 0, 1);
+  --quick: 140ms;
+  --standard: 280ms;
+  --slow: 640ms;
+  --radius: 8px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --max: 1120px;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100%;
+}
+button, a { font: inherit; }
+:focus-visible {
+  outline: 2px solid var(--copper);
+  outline-offset: 3px;
+}
+.wrap {
+  width: min(var(--max), calc(100% - 32px));
+  margin: 0 auto;
+}
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+.mark {
+  font-family: var(--font-display);
+  font-weight: 620;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.mark span { color: var(--copper); }
+nav .quiet {
+  color: var(--muted);
+  font-size: 14px;
+}
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 32px;
+  align-items: end;
+  padding: 16px 0 32px;
+  min-height: 72vh;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 620;
+  font-size: clamp(40px, 6.4vw, 72px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 16px;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+.lede {
+  max-width: 38ch;
+  margin: 0 0 24px;
+  color: var(--ink);
+}
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: var(--copper-deep);
+  color: var(--paper);
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color var(--quick) var(--ease-on), color var(--quick) var(--ease-on), border-color var(--quick) var(--ease-on), transform var(--quick) var(--ease-arrive);
+}
+.btn:hover { background: var(--copper); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn.ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+.btn.ghost:hover { border-color: var(--ink); background: transparent; }
+.stage {
+  position: relative;
+  height: min(62vh, 560px);
+  min-height: 360px;
+  background: var(--wash);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+#ink {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+.stage-note {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+.states {
+  padding: 8px 0 32px;
+}
+.states h2, .ledger h2, .close h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 620;
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+}
+.states > p, .ledger > p { margin: 0 0 16px; max-width: 62ch; color: var(--muted); }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.card {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  min-height: 44px;
+}
+.card-surface {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-height: 168px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform var(--standard) var(--ease-arrive), border-color var(--quick) var(--ease-on);
+}
+.card:hover .card-surface,
+.card:focus-visible .card-surface,
+.card.is-on .card-surface {
+  transform: translateY(-2px);
+  border-color: var(--ink);
+}
+.card.is-on .card-surface { border-color: var(--copper); }
+.swatch {
+  width: 56px;
+  height: 40px;
+  border-radius: 4px;
+  background: var(--wash);
+  position: relative;
+  overflow: hidden;
+}
+.swatch i {
+  position: absolute;
+  inset: 8px;
+  background: var(--copper);
+  transform-origin: left center;
+}
+.card[data-state="press"] .swatch i { transform: scaleX(0.55); }
+.card[data-state="arrive"] .swatch i { transform: translateX(-8px); opacity: 0.7; }
+.card[data-state="draw"] .swatch i { clip-path: inset(46% 0 46% 0); }
+.card[data-state="settle"] .swatch i { transform: scale(0.72); transform-origin: center; }
+.card.is-on[data-state="press"] .swatch i { transform: scaleX(1); transition: transform 180ms var(--ease-arrive); }
+.card.is-on[data-state="arrive"] .swatch i { transform: none; opacity: 1; transition: transform 280ms var(--ease-arrive), opacity 280ms var(--ease-arrive); }
+.card.is-on[data-state="draw"] .swatch i { clip-path: inset(0); transition: clip-path 420ms var(--ease-arrive); }
+.card.is-on[data-state="settle"] .swatch i { transform: scale(1); transition: transform 320ms var(--ease-arrive); }
+.card h3 { margin: 16px 0 4px; font-size: 20px; font-weight: 600; }
+.card p { margin: 0; font-size: 14px; color: var(--muted); }
+.panel {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  align-items: center;
+  min-height: 88px;
+}
+.panel[hidden] { display: none; }
+.demo {
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+.bar {
+  width: 120px;
+  height: 8px;
+  background: var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--copper);
+  transform: scaleX(0.2);
+  transform-origin: left center;
+}
+.panel.show-press .bar span { animation: fill 180ms var(--ease-arrive) forwards; }
+.chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--copper);
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+}
+.panel.show-arrive .chip { animation: land 280ms var(--ease-arrive) forwards; }
+.check {
+  width: 48px;
+  height: 48px;
+}
+.check path {
+  fill: none;
+  stroke: var(--copper);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+}
+.panel.show-draw .check path { animation: draw 420ms var(--ease-arrive) forwards; }
+.blob {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--copper);
+  transform: scale(0.8);
+}
+.panel.show-settle .blob { animation: settle 320ms var(--ease-arrive) forwards; }
+.panel .copy h3 { margin: 0 0 8px; font-size: 20px; }
+.panel .copy p { margin: 0; max-width: 62ch; }
+.ledger { padding: 16px 0 32px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th, td {
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+th { font-weight: 500; color: var(--muted); font-size: 14px; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.close {
+  padding: 16px 0 48px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease-arrive), transform 180ms var(--ease-arrive);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.status[hidden] { display: none; }
+.status {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--wash);
+}
+@keyframes fill { to { transform: scaleX(1); } }
+@keyframes land { to { opacity: 1; transform: none; } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes settle { 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@media (max-width: 800px) {
+  .hero, .grid, .panel, .close { grid-template-columns: 1fr; display: grid; }
+  .hero { min-height: 0; gap: 24px; }
+  .stage { height: 420px; min-height: 320px; }
+  .close { gap: 8px; }
+  nav .quiet { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .chip, .card[data-state="arrive"] .swatch i { opacity: 1; transform: none; }
+  .bar span, .card[data-state="press"] .swatch i { transform: none; }
+  .check path, .card[data-state="draw"] .swatch i { stroke-dashoffset: 0; clip-path: none; }
+  .blob, .card[data-state="settle"] .swatch i { transform: none; }
+  .card:hover .card-surface { transform: none; }
+}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="mark" href="#top">Night<span>tail</span></a>
+      <span class="quiet">Motion study, 22 Nov 2026</span>
+    </nav>
+    <header class="hero" id="top">
+      <div>
+        <h1>Ink that follows the hand.</h1>
+        <p class="lede">One field of copper smoke, four states, and the rules that keep a page from looking generated.</p>
+        <div class="actions">
+          <button class="btn" id="copy" type="button">Copy the motion brief</button>
+          <button class="btn ghost" id="replay" type="button">Replay the field</button>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="ink" aria-label="Copper ink field. Drag to push the smoke."></canvas>
+        <p class="stage-note" id="note">Drag to push the ink.</p>
+      </div>
+    </header>
+    <section class="states" aria-labelledby="states-title">
+      <h2 id="states-title">Four states</h2>
+      <p>Press, arrive, draw, settle. Pick one. The rest stay still.</p>
+      <div class="grid" id="grid">
+        <button class="card" type="button" data-state="press" aria-pressed="false">
+          <span class="card-surface">
+            <span class="swatch" aria-hidden="true"><i></i></span>
+            <span>
+              <h3>Press</h3>
+              <p>140 ms. The bar fills from the left. No bounce.</p>
+            </span>
+          </span>
+        </button>
+        <button class="card" type="button" data-state="arrive" aria-pressed="false">
+          <span class="card-surface">
+            <span class="swatch" aria-hidden="true"><i></i></span>
+            <span>
+              <h3>Arrive</h3>
+              <p>280 ms. Twelve pixels up, then it stops.</p>
+            </span>
+          </span>
+        </button>
+        <button class="card" type="button" data-state="draw" aria-pressed="false">
+          <span class="card-surface">
+            <span class="swatch" aria-hidden="true"><i></i></span>
+            <span>
+              <h3>Draw</h3>
+              <p>420 ms. The stroke writes itself once.</p>
+            </span>
+          </span>
+        </button>
+        <button class="card" type="button" data-state="settle" aria-pressed="false">
+          <span class="card-surface">
+            <span class="swatch" aria-hidden="true"><i></i></span>
+            <span>
+              <h3>Settle</h3>
+              <p>320 ms. A small overshoot, then rest.</p>
+            </span>
+          </span>
+        </button>
+      </div>
+      <div class="panel" id="panel" hidden>
+        <div class="demo" id="demo" aria-hidden="true"></div>
+        <div class="copy">
+          <h3 id="panel-title"></h3>
+          <p id="panel-body"></p>
+        </div>
+      </div>
+      <div class="status" id="empty" hidden>
+        <strong>Nothing selected.</strong> Pick a state above. The field still runs on its own.
+      </div>
+      <div class="status" id="error" hidden>
+        <strong>This browser could not start the ink.</strong> The states below still work. Drag is off.
+      </div>
+    </section>
+    <section class="ledger">
+      <h2>What each skill decided</h2>
+      <p>Read from the skill files on 22 Nov 2026. Not from the repo slogans.</p>
+      <table>
+        <thead>
+          <tr><th>Skill</th><th>Rule used here</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>frontend-design</td><td>One orchestrated moment. No fade-up on every block. No single italic word.</td></tr>
+          <tr><td>Impeccable</td><td>Motion explains state. Hover moves a child, never the hit target. Exit is faster than enter.</td></tr>
+          <tr><td>Hallmark</td><td>Tokens only. No tracked labels, no arrow glued to a link, no invented metric.</td></tr>
+          <tr><td>ui-ux-pro-max</td><td>44 px targets, 4.5:1 text, one duration per job, not one duration for everything.</td></tr>
+          <tr><td>Motion design</td><td>Premium timing. Signature curve on 80% of moves. Stagger stays under 500 ms.</td></tr>
+          <tr><td>DESIGN.md</td><td>Named tokens with a reason, so the next page cannot drift.</td></tr>
+          <tr><td>Magic UI</td><td>Border light and marquee skipped. They decorate. The ink field is the one effect.</td></tr>
+          <tr><td>WebGL Fluid</td><td>Smoke that answers the pointer, paused off-screen and when the tab hides.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <footer class="close">
+      <div>
+        <h2>Take the brief.</h2>
+        <p>Paste it above the next screen. The numbers stay. The subject changes.</p>
+      </div>
+      <button class="btn" id="copy2" type="button">Copy the motion brief</button>
+    </footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const BRIEF = `MOTION BRIEF
+Feeling: copper ink settling on paper.
+Personality: Premium. No bounce except one 6% settle.
+Signature ease: cubic-bezier(0.16, 1, 0.3, 1)
+Leave ease: cubic-bezier(0.3, 0, 1, 1)
+Durations: 140ms press, 280ms arrive, 420ms draw, 320ms settle.
+Focal moment: one ink field. Everything else is a state, not a reveal.
+Do not fade-and-slide every section. Do not move a hovered card itself.
+Transform and opacity only. Reduced motion keeps color and state, drops travel.
+Stagger under 500ms. Exit faster than entrance.`;
+
+const notes = {
+  press: ["Press", "140 ms, ease-out. A press is feedback, so it must feel instant. The fill uses scaleX, not width, so layout does not shift."],
+  arrive: ["Arrive", "280 ms. Twelve pixels is under a third of the screen, so it needs no extra keyframe. Opacity rides along. Opacity alone would look cheap."],
+  draw: ["Draw", "420 ms. The stroke is the story: setup, action, rest. It plays once. A loop here would be decoration."],
+  settle: ["Settle", "320 ms with a 6% overshoot, then rest. Premium allows almost no bounce. This is the only place it appears."]
+};
+
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const toast = document.getElementById("toast");
+let toastTimer;
+
+function say(text) {
+  toast.textContent = text;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+async function copyBrief(btn) {
+  btn.disabled = true;
+  try {
+    await navigator.clipboard.writeText(BRIEF);
+    say("Motion brief copied.");
+  } catch (err) {
+    say("Copy failed. Select the brief from the reply and copy it there.");
+  }
+  btn.disabled = false;
+}
+
+document.getElementById("copy").addEventListener("click", (e) => copyBrief(e.currentTarget));
+document.getElementById("copy2").addEventListener("click", (e) => copyBrief(e.currentTarget));
+
+const panel = document.getElementById("panel");
+const demo = document.getElementById("demo");
+const empty = document.getElementById("empty");
+empty.hidden = false;
+
+function renderDemo(state) {
+  if (state === "press") demo.innerHTML = '<div class="bar"><span></span></div>';
+  if (state === "arrive") demo.innerHTML = '<div class="chip"></div>';
+  if (state === "draw") demo.innerHTML = '<svg class="check" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 25 l10 10 l18-20"/></svg>';
+  if (state === "settle") demo.innerHTML = '<div class="blob"></div>';
+}
+
+document.getElementById("grid").addEventListener("click", (event) => {
+  const card = event.target.closest(".card");
+  if (!card) return;
+  const state = card.dataset.state;
+  const on = card.classList.contains("is-on");
+  document.querySelectorAll(".card").forEach((el) => {
+    el.classList.remove("is-on");
+    el.setAttribute("aria-pressed", "false");
+  });
+  panel.className = "panel";
+  if (on) {
+    panel.hidden = true;
+    empty.hidden = false;
+    return;
+  }
+  card.classList.add("is-on");
+  card.setAttribute("aria-pressed", "true");
+  empty.hidden = true;
+  panel.hidden = false;
+  renderDemo(state);
+  const [title, body] = notes[state];
+  document.getElementById("panel-title").textContent = title;
+  document.getElementById("panel-body").textContent = body;
+  requestAnimationFrame(() => panel.classList.add("show-" + state));
+});
+
+const canvas = document.getElementById("ink");
+const stage = document.getElementById("stage");
+const note = document.getElementById("note");
+const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false, antialias: false });
+const errorBox = document.getElementById("error");
+
+if (!gl) {
+  errorBox.hidden = false;
+  note.textContent = "Ink is off in this browser.";
+} else {
+  const vert = `
+    attribute vec2 a;
+    varying vec2 v;
+    void main() {
+      v = a * 0.5 + 0.5;
+      gl_Position = vec4(a, 0.0, 1.0);
+    }`;
+  const frag = `
+    precision mediump float;
+    varying vec2 v;
+    uniform vec2 u_res;
+    uniform float u_time;
+    uniform vec2 u_p;
+    uniform float u_down;
+    void main() {
+      vec2 uv = v;
+      vec2 p = u_p;
+      float d = distance(uv * vec2(u_res.x / u_res.y, 1.0), p * vec2(u_res.x / u_res.y, 1.0));
+      float wake = exp(-d * 7.0) * (0.35 + u_down * 0.65);
+      float drift = sin(uv.x * 6.0 + u_time * 0.35) * 0.5 + 0.5;
+      float band = smoothstep(0.15, 0.85, uv.y + drift * 0.08);
+      vec3 paper = vec3(0.906, 0.867, 0.816);
+      vec3 copper = vec3(0.604, 0.243, 0.141);
+      vec3 ink = vec3(0.110, 0.098, 0.082);
+      vec3 col = mix(paper, copper, band * 0.28 + wake);
+      col = mix(col, ink, wake * wake * 0.35);
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+  function shader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  let program;
+  try {
+    program = gl.createProgram();
+    gl.attachShader(program, shader(gl.VERTEX_SHADER, vert));
+    gl.attachShader(program, shader(gl.FRAGMENT_SHADER, frag));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+  } catch (err) {
+    errorBox.hidden = false;
+    note.textContent = "Ink failed to start.";
+    program = null;
+  }
+  if (program) {
+    gl.useProgram(program);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(program, "a");
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const uRes = gl.getUniformLocation(program, "u_res");
+    const uTime = gl.getUniformLocation(program, "u_time");
+    const uP = gl.getUniformLocation(program, "u_p");
+    const uDown = gl.getUniformLocation(program, "u_down");
+    let pointer = [0.62, 0.42];
+    let down = 0;
+    let start = performance.now();
+    let running = true;
+    let raf = 0;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 800 ? 1.5 : 2);
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      canvas.width = Math.max(1, Math.floor(w * dpr));
+      canvas.height = Math.max(1, Math.floor(h * dpr));
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    function frame(now) {
+      if (!running) return;
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.uniform1f(uTime, (now - start) / 1000);
+      gl.uniform2f(uP, pointer[0], 1 - pointer[1]);
+      gl.uniform1f(uDown, reduced ? 0 : down);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      raf = requestAnimationFrame(frame);
+    }
+    function startLoop() {
+      if (running) return;
+      running = true;
+      raf = requestAnimationFrame(frame);
+    }
+    function stopLoop() {
+      running = false;
+      cancelAnimationFrame(raf);
+    }
+    raf = requestAnimationFrame(frame);
+
+    function setPointer(e) {
+      const r = canvas.getBoundingClientRect();
+      pointer = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+    }
+    canvas.addEventListener("pointerdown", (e) => {
+      canvas.setPointerCapture(e.pointerId);
+      down = 1;
+      setPointer(e);
+      note.textContent = "Ink is following.";
+    });
+    canvas.addEventListener("pointermove", (e) => { if (down) setPointer(e); });
+    canvas.addEventListener("pointerup", () => { down = 0; note.textContent = "Drag to push the ink."; });
+    canvas.addEventListener("pointercancel", () => { down = 0; });
+
+    document.getElementById("replay").addEventListener("click", () => {
+      start = performance.now();
+      pointer = [0.62, 0.42];
+      say("Field replayed.");
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopLoop();
+      else startLoop();
+    });
+    const seen = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => entry.isIntersecting ? startLoop() : stopLoop());
+    }, { threshold: 0.05 });
+    seen.observe(stage);
+    if (reduced) note.textContent = "Motion is reduced. Drag still tints the field.";
+  }
+}
+</script>
+</body>
+</html>
