@@ -42,7 +42,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not copy effects without checking their context, performance, input model, and relevance to the current design.
 - **License note:** The root `LICENSE` read during research states MIT. Recheck before copying examples or assets.
 
-### 12. GSAP
+### 4. GSAP
 
 - **Repository:** [greensock/GSAP](https://github.com/greensock/GSAP)
 - **Role:** JavaScript animation tooling for timelines, UI motion, and scroll-linked sequences.
