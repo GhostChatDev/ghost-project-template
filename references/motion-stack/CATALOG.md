@@ -42,7 +42,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not copy effects without checking their context, performance, input model, and relevance to the current design.
 - **License note:** The root `LICENSE` read during research states MIT. Recheck before copying examples or assets.
 
-### 4. GSAP
+### 12. GSAP
 
 - **Repository:** [greensock/GSAP](https://github.com/greensock/GSAP)
 - **Role:** JavaScript animation tooling for timelines, UI motion, and scroll-linked sequences.
@@ -110,7 +110,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 
 ## Video composition and post-production
 
-### 12. Hyperframes
+### 13. Hyperframes
 
 - **Repository:** [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes)
 - **Role:** A video-generation and editing reference to investigate for programmatic motion content and compositing workflows.
@@ -119,7 +119,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not assume browser playback, native rendering, or a particular AI capability without checking the current project. Media generation may incur external costs.
 - **License note:** The root `LICENSE` read during research states MIT. Inputs, generated media, fonts, and external services can have separate terms.
 
-### 11. Remotion
+### 14. Remotion
 
 - **Repository:** [remotion-dev/remotion](https://github.com/remotion-dev/remotion)
 - **Role:** Creates videos programmatically with React components and web rendering techniques.
@@ -128,7 +128,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Separate interactive previews from final rendering. Test long renders, missing assets, fonts, audio sync, and resource usage.
 - **License note:** The root `LICENSE.md` describes Remotion's license terms, including conditions that may require a company license. Read the full current terms before commercial use.
 
-### 13. Remotion Skills
+### 15. Remotion Skills
 
 - **Repository:** [remotion-dev/skills](https://github.com/remotion-dev/skills)
 - **Role:** Agent instructions and supporting material for working with Remotion video projects.
