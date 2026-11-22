@@ -37,8 +37,14 @@ Describe this project's own visual and interaction direction. These prompts are 
 - How components adapt between sizes:
 - Touch, mouse, keyboard, controller, or other input requirements:
 
-## Motion
+## Interaction and motion
 
+- One feeling in five words:
+- One motion idea:
+- One clock:
+- Named spring damping:
+- Subject, travel, and other relevant pixel sizes:
+- Seek check: cold frame N versus sequential frame N:
 - Purpose of motion in this project:
 - Transition durations, delays, easing, and sequencing:
 - Hover, focus, pressed, loading, and feedback behavior:

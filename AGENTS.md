@@ -15,3 +15,7 @@ References under `references/` are reading material, not included tools or libra
 Before using a motion reference, confirm it fits the chosen platform and inspect its current documentation, examples, release status, and license. Choose techniques that serve the project's `PRODUCT.md` and `DESIGN.md`; do not impose a reference's visual style on the project.
 
 Use no more than one relevant reference skill for a task. Complete the applicable platform brief and record only evidence actually observed during the work.
+
+## Motion stack
+
+Before animating a screen, game, or film, read `references/motion-stack/README.md` and fill the matching brief. Do not install a listed repo unless `PRODUCT.md` asks for it. A screenshot is not proof of motion.
