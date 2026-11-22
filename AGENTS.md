@@ -41,3 +41,7 @@ Do not mark work complete merely because it builds. Review the resulting screen 
 ## Handoff
 
 Summarize the completed slice, any assumptions, and the checks performed. Call out unresolved decisions or behavior separately. Stop for review when requested rather than continuing into another screen or system.
+
+## Optional motion research
+
+Before choosing a motion reference, read `references/motion-stack/README.md`. Use only references relevant to the current screen or system; project briefs and existing technology take priority. Verify the current repository documentation and license before using anything.

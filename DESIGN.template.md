@@ -61,3 +61,7 @@ Complete this section for games; remove it for non-game projects.
 ## Things that must not change
 
 List approved design decisions that require review before alteration: identity elements, layout principles, gameplay cues, timing rules, accessibility commitments, or reference assets. Keep this list project-specific.
+
+## Motion reference notes
+
+If this project uses a motion reference, record its source, intended purpose, current license review, platform fit, and project-specific adaptations here. Do not adopt its visual style or dependencies by default.
