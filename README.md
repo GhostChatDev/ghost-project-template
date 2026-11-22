@@ -1,55 +1,50 @@
-# Motion stack reference
+# Project Template
 
-A documentation-only reading list for apps, games, 3D scenes, and video. It is based on the [Fable 5.2 Motion Playbook](https://www.ai.joaoqueiros.com/blog/fable-5-2-motion-playbook-flxrnc-prompts-15-repos).
+A documentation-only starting point for future apps and games. It helps each project define its own product and design direction without prescribing a technology stack, feature set, dependency, or visual style.
 
-These entries are **optional references**, not included tools. Nothing here installs a dependency, runs external code, or requires an agent to use a library.
+## Included files
 
-## Before using a reference
+- `AGENTS.md` — shared working instructions for future implementation.
+- `PRODUCT.template.md` — prompts for the audience, purpose, platform, scope, and fixed constraints.
+- `DESIGN.template.md` — prompts for visual direction, color, typography, spacing, interaction, and motion, including game-specific timing and reduced motion.
+- `references/motion-stack/` — optional reference material, not a required dependency.
+- `LICENSE` — the repository license.
 
-1. Read `PRODUCT.md` and `DESIGN.md`; choose the technique from the project's needs.
-2. Open the linked repository and inspect its current documentation, examples, and release status.
-3. Read its license and any asset, trademark, or platform terms at the time of use.
-4. Verify that it supports the chosen platform and can be added without unrelated dependencies.
-5. Build one screen or game system first; test its states, sizes, input methods, and accessibility settings.
+## Use this repository as a template
 
-## Directory
+### On GitHub
 
-- `CATALOG.md`: fifteen repositories with links, roles, platform fit, prompting starters, cautions, and license notes.
-- `skills/`: three opt-in instruction skills. A skill is a folder containing `SKILL.md`; use only one relevant skill for a task, or combine skills when the task spans design, motion, and production.
-- `forms/`: five briefs for recording constraints before implementation.
-- `lessons/lessons.md`: project-specific lessons added after observed results.
+1. Open this repository and choose **Use this template**, then **Create a new repository**.
+2. Name the new repository and create it.
+3. Clone the new repository to your computer.
+4. In its root folder, copy the templates to their project-specific names:
 
-## Keep boundaries clear
+   ```sh
+   cp PRODUCT.template.md PRODUCT.md
+   cp DESIGN.template.md DESIGN.md
+   ```
 
-- Do not clone these repositories into this template.
-- Do not add package manifests, lockfiles, submodules, generated apps, or vendored source.
-- Do not treat visual polish as a substitute for product behavior.
-- Do not apply one repository's style, timing, or technology to every project.
-- Do not assume that a public repository permits every use; check its license each time.
+   On Windows PowerShell, use:
 
-If this reference conflicts with a project's `PRODUCT.md` or `DESIGN.md`, the project documents win.
+   ```powershell
+   Copy-Item PRODUCT.template.md PRODUCT.md
+   Copy-Item DESIGN.template.md DESIGN.md
+   ```
 
-## Optional motion references
+5. Replace the prompts in `PRODUCT.md` and `DESIGN.md` with decisions for the new project.
+6. Keep `AGENTS.md` at the root so future work reads the shared instructions.
 
-The `references/motion-stack/` directory is a documentation-only reading list for apps, games, 3D scenes, and video. It is based on the [Fable 5.2 Motion Playbook](https://www.ai.joaoqueiros.com/blog/fable-5-2-motion-playbook-flxrnc-prompts-15-repos).
+If GitHub's template option is unavailable, create a new repository and copy these files into it instead.
 
-These entries are optional references, not included tools. Nothing here installs a dependency, runs external code, or requires an agent to use a library.
+### In an existing project
 
-Before using a reference:
+Copy `AGENTS.md`, `PRODUCT.template.md`, and `DESIGN.template.md` into the project root, then create `PRODUCT.md` and `DESIGN.md` as above. Review existing project conventions before replacing or merging any files with the same names.
 
-1. Read the project's `PRODUCT.md` and `DESIGN.md`, and choose a technique only when it serves those decisions.
-2. Read `references/motion-stack/README.md`, then open the linked repository and inspect its current documentation, examples, release status, and license.
-3. Verify platform compatibility and any asset, trademark, or platform terms at the time of use.
-4. Apply the simplest suitable technique to one screen or game system, then check its relevant states, sizes, inputs, and accessibility settings.
+## Start a screen or game system
 
-Reference directory:
+Before implementation, make sure `PRODUCT.md` and `DESIGN.md` contain enough detail to guide the work. Then request one screen or game system at a time. Future work should follow `AGENTS.md`, avoid unrequested additions, and check the states, layouts, inputs, and target sizes relevant to that slice.
 
-- `CATALOG.md`: fifteen repositories with links, roles, platform fit, prompting starters, cautions, and license notes.
-- `skills/`: three opt-in instruction skills, each in a folder containing `SKILL.md`.
-- `forms/`: five briefs for recording constraints before implementation.
-- `lessons/lessons.md`: project-specific lessons added after observed results.
-
-Do not clone these repositories into this template, add package manifests or lockfiles for them, or vendor their source or assets without confirming the project's requirements and the source's license. Project documents always take priority over a reference.
+The `*.template.md` files are reusable prompts. Keep them unchanged for future projects; record project decisions in the copied `PRODUCT.md` and `DESIGN.md` files.
 
 ---
 <img src="https://ghostchat.tech/icons/ghost-code-dev.png" width="20" height="20" alt="" align="top"> Built by [Ghost Code Dev](https://ghostchat.tech)

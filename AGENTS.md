@@ -1,21 +1,47 @@
 # Shared instructions for future work
 
-1. Read `PRODUCT.md` and `DESIGN.md` before building or changing a screen. If either is missing, copy its `.template.md` counterpart and confirm the project decisions with the user.
-2. Work on one screen or game system at a time. Make it usable before starting another.
-3. Avoid unrequested dependencies. Use the platform and tools already in the project where possible; ask before adding a package, framework, or service.
-4. Check the relevant states for the work: loading, empty, error, success, disabled, pause, or interruption as applicable.
-5. Check relevant screen sizes and input methods for the target platform. Include phone, tablet, and desktop sizes only when the product supports them.
-6. Respect accessibility and performance constraints in `PRODUCT.md` and `DESIGN.md`, including reduced-motion preferences where applicable.
-7. Do not impose one visual style on every project. Follow each project's own product and design documents.
+These instructions apply to apps and games built from this template. They define a way of working, not a product, technology stack, or visual style.
 
-## Optional reference material
+## Before starting
 
-References under `references/` are reading material, not included tools or libraries. Do not install, import, clone, vendor, or run their code unless the user specifically asks for that in a project.
+1. Read `PRODUCT.md` to understand the audience, purpose, platform, and constraints.
+2. Read `DESIGN.md` to understand the visual direction and interaction or gameplay rules.
+3. If either file is missing, use its corresponding `*.template.md` file to gather the missing decisions before implementation. Do not silently substitute preferences from another project.
+4. Treat explicit product and design decisions as constraints. Ask before changing anything listed as must not change.
 
-Before using a motion reference, confirm it fits the chosen platform and inspect its current documentation, examples, release status, and license. Choose techniques that serve the project's `PRODUCT.md` and `DESIGN.md`; do not impose a reference's visual style on the project.
+## Work in small, reviewable slices
 
-Use no more than one relevant reference skill for a task. Complete the applicable platform brief and record only evidence actually observed during the work.
+- Work on one screen or one game system at a time.
+- Finish a coherent slice—including its navigation, feedback, and relevant states—before starting another.
+- Keep changes focused on the requested slice. Avoid unrelated redesigns, cleanup, or refactors.
+- Reuse existing patterns and components where they fit the current project.
+- Do not add dependencies, frameworks, services, assets, or workflows that were not requested. If one seems necessary, explain why and ask first.
+- Do not add speculative features or placeholder screens.
+
+## Preserve the project's direction
+
+- Follow `DESIGN.md`; do not impose a default theme, component style, font, color palette, or motion treatment.
+- For apps, support the platforms, orientations, input methods, and accessibility needs named in the project documents.
+- For games, preserve the intended controls, game feel, timing, readability, and gameplay rules.
+- Prefer the simplest implementation that satisfies the current slice and is consistent with the existing codebase.
 
 ## Motion stack
 
-Before animating a screen, game, or film, read `references/motion-stack/README.md` and fill the matching brief. Do not install a listed repo unless `PRODUCT.md` asks for it. A screenshot is not proof of motion.
+Before animating a screen, game, or film, read `references/motion-stack/README.md` and fill the matching brief. Do not install a listed repository unless `PRODUCT.md` asks for it. A screenshot is not proof of motion.
+
+## Check the result
+
+Before calling a slice complete, check what is relevant to that slice:
+
+- **States:** loading, empty, populated, error, disabled, success, and partial or interrupted states where applicable.
+- **Layout:** the supported phone, tablet, desktop, console, or other target sizes; narrow and wide layouts; long content; and safe areas where applicable.
+- **Interaction:** every visible control works; keyboard, pointer, touch, and controller behavior where supported; focus and navigation remain understandable.
+- **Games:** gameplay timing, input response, pause/resume, restart, win/loss, and interruption behavior where applicable.
+- **Motion:** transitions and animations match the design; reduced-motion behavior is provided where needed.
+- **Verification:** run the project's existing relevant build, tests, or preview. Report what was checked and what could not be checked.
+
+Do not mark work complete merely because it builds. Review the resulting screen or play the resulting system when the available tools allow it.
+
+## Handoff
+
+Summarize the completed slice, any assumptions, and the checks performed. Call out unresolved decisions or behavior separately. Stop for review when requested rather than continuing into another screen or system.
