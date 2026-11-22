@@ -110,7 +110,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 
 ## Video composition and post-production
 
-### 11. Hyperframes
+### 12. Hyperframes
 
 - **Repository:** [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes)
 - **Role:** A video-generation and editing reference to investigate for programmatic motion content and compositing workflows.
@@ -119,7 +119,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not assume browser playback, native rendering, or a particular AI capability without checking the current project. Media generation may incur external costs.
 - **License note:** The root `LICENSE` read during research states MIT. Inputs, generated media, fonts, and external services can have separate terms.
 
-### 13. Remotion
+### 11. Remotion
 
 - **Repository:** [remotion-dev/remotion](https://github.com/remotion-dev/remotion)
 - **Role:** Creates videos programmatically with React components and web rendering techniques.
@@ -128,7 +128,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Separate interactive previews from final rendering. Test long renders, missing assets, fonts, audio sync, and resource usage.
 - **License note:** The root `LICENSE.md` describes Remotion's license terms, including conditions that may require a company license. Read the full current terms before commercial use.
 
-### 14. Remotion Skills
+### 13. Remotion Skills
 
 - **Repository:** [remotion-dev/skills](https://github.com/remotion-dev/skills)
 - **Role:** Agent instructions and supporting material for working with Remotion video projects.
@@ -137,7 +137,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** These instructions do not themselves provide a renderer. Keep the Remotion version and guidance aligned; avoid installing unrelated tooling.
 - **License note:** GitHub's license endpoint returned 404 during research, and the root listing showed no license file. Inspect current repository terms before copying or redistributing content.
 
-### 15. FFmpeg
+### 14. FFmpeg
 
 - **Repository:** [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)
 - **Role:** Command-line tools and libraries for recording, converting, inspecting, and streaming audio and video.
