@@ -42,7 +42,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not copy effects without checking their context, performance, input model, and relevance to the current design.
 - **License note:** The root `LICENSE` read during research states MIT. Recheck before copying examples or assets.
 
-### 12. GSAP
+### 5. GSAP
 
 - **Repository:** [greensock/GSAP](https://github.com/greensock/GSAP)
 - **Role:** JavaScript animation tooling for timelines, UI motion, and scroll-linked sequences.
@@ -53,7 +53,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 
 ## Interface design and web motion guidance
 
-### 5. Magic UI
+### 6. Magic UI
 
 - **Repository:** [magicuidesign/magicui](https://github.com/magicuidesign/magicui)
 - **Role:** Animated interface components and effects for web projects; useful for studying component-level motion patterns.
@@ -62,7 +62,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not import a whole component collection for one effect. Check framework compatibility, accessibility, bundle impact, and reduced-motion behavior.
 - **License note:** The root `LICENSE.md` read during research states MIT. Component examples may involve additional assets or dependencies.
 
-### 6. UI UX Pro Max Skill
+### 7. UI UX Pro Max Skill
 
 - **Repository:** [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
 - **Role:** Agent-oriented UI/UX guidance for turning product requirements into structured design decisions.
@@ -71,7 +71,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** A design checklist does not replace user research, platform guidelines, or testing the real interface.
 - **License note:** The root `LICENSE` URL checked during research returned 404. No reuse permission is inferred; inspect the current repository terms before copying content.
 
-### 7. Taste Skill
+### 8. Taste Skill
 
 - **Repository:** [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)
 - **Role:** Design-review guidance for visual hierarchy, composition, interface detail, and motion choices.
@@ -80,7 +80,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not let generic 'taste' rules override the project's visual direction, evidence from users, or accessibility needs.
 - **License note:** The root `LICENSE` read during research states MIT. Recheck before reproducing instruction text.
 
-### 8. Impeccable
+### 9. Impeccable
 
 - **Repository:** [pbakaus/impeccable](https://github.com/pbakaus/impeccable)
 - **Role:** Interface-quality guidance focused on making digital products clearer and more polished.
@@ -90,7 +90,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **License note:** A root license was located during research. Read the current `LICENSE` before reuse rather than relying on this summary for its terms.
 ## 3D scenes and spatial interaction
 
-### 9. Three.js
+### 10. Three.js
 
 - **Repository:** [mrdoob/three.js](https://github.com/mrdoob/three.js)
 - **Role:** WebGL-based 3D rendering for scenes, models, cameras, lighting, and interactive spatial experiences.
@@ -99,7 +99,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Large models and effects can hurt startup time, thermals, battery, and accessibility. Provide useful fallback content and test touch input.
 - **License note:** The root `LICENSE` read during research states MIT. Models, textures, and example assets can have separate terms.
 
-### 10. MCP for Blender
+### 11. MCP for Blender
 
 - **Repository:** [ahujasid/mcp-for-blender](https://github.com/ahujasid/mcp-for-blender)
 - **Role:** Connects Blender with MCP-compatible tools for assisted 3D scene creation and editing.
@@ -110,7 +110,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 
 ## Video composition and post-production
 
-### 13. Hyperframes
+### 12. Hyperframes
 
 - **Repository:** [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes)
 - **Role:** A video-generation and editing reference to investigate for programmatic motion content and compositing workflows.
@@ -119,7 +119,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Do not assume browser playback, native rendering, or a particular AI capability without checking the current project. Media generation may incur external costs.
 - **License note:** The root `LICENSE` read during research states MIT. Inputs, generated media, fonts, and external services can have separate terms.
 
-### 14. Remotion
+### 13. Remotion
 
 - **Repository:** [remotion-dev/remotion](https://github.com/remotion-dev/remotion)
 - **Role:** Creates videos programmatically with React components and web rendering techniques.
@@ -128,7 +128,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** Separate interactive previews from final rendering. Test long renders, missing assets, fonts, audio sync, and resource usage.
 - **License note:** The root `LICENSE.md` describes Remotion's license terms, including conditions that may require a company license. Read the full current terms before commercial use.
 
-### 15. Remotion Skills
+### 14. Remotion Skills
 
 - **Repository:** [remotion-dev/skills](https://github.com/remotion-dev/skills)
 - **Role:** Agent instructions and supporting material for working with Remotion video projects.
@@ -137,7 +137,7 @@ Use this catalog to choose a reference, not to prescribe a stack. The prompt sta
 - **Cautions:** These instructions do not themselves provide a renderer. Keep the Remotion version and guidance aligned; avoid installing unrelated tooling.
 - **License note:** GitHub's license endpoint returned 404 during research, and the root listing showed no license file. Inspect current repository terms before copying or redistributing content.
 
-### 14. FFmpeg
+### 15. FFmpeg
 
 - **Repository:** [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg)
 - **Role:** Command-line tools and libraries for recording, converting, inspecting, and streaming audio and video.
