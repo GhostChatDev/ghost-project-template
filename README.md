@@ -14,3 +14,10 @@ PRODUCT.md answers who this is for, what it does, which platforms, what is out o
 
 DESIGN.md answers the visual direction, colour roles rather than hex lists, type scale, spacing, how inputs behave, and motion timing including reduced motion.
 The stop line is the whole point of that section. An unfilled template that gets built on anyway is the same trap as skip-while-draft: unverified work wearing the shape of waiting work.
+
+## Optional Ghost Code product research
+
+[The improvement candidates](references/ghost-code-improvements/README.md) record a prioritized assessment of measurement, secret scanning, task reliability, deployment, documentation retrieval, and exploratory testing. This is maintainer research, not a dependency list or a request to add these services to generated apps. Adoption requires a separately approved project decision.
+
+---
+<img src="https://ghostchat.tech/icons/ghost-code-dev.png" width="20" height="20" alt="" align="top"> Built by [Ghost Code Dev](https://ghostchat.tech)
