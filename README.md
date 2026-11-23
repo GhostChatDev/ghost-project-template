@@ -1,50 +1,16 @@
-# Project Template
+## With Ghost Code
 
-A documentation-only starting point for future apps and games. It helps each project define its own product and design direction without prescribing a technology stack, feature set, dependency, or visual style.
+Point Ghost Code at this repository and ask for the first screen.
 
-## Included files
+If PRODUCT.md and DESIGN.md do not exist yet, the first run copies PRODUCT.template.md to PRODUCT.md and DESIGN.template.md to DESIGN.md, fills in only what the request already answers, and leaves the rest as unanswered prompts. Then it stops. It does not build in that same run. It shows what it wrote and waits for a reply.
 
-- `AGENTS.md` — shared working instructions for future implementation.
-- `PRODUCT.template.md` — prompts for the audience, purpose, platform, scope, and fixed constraints.
-- `DESIGN.template.md` — prompts for visual direction, color, typography, spacing, interaction, and motion, including game-specific timing and reduced motion.
-- `references/motion-stack/` — optional reference material, not a required dependency.
-- `LICENSE` — the repository license.
+Once both files exist, they are the brief. Read them before every task and do not edit either one unless asked.
 
-## Use this repository as a template
+Leave the *.template.md files unchanged.
 
-### On GitHub
+## What a filled brief should contain
 
-1. Open this repository and choose **Use this template**, then **Create a new repository**.
-2. Name the new repository and create it.
-3. Clone the new repository to your computer.
-4. In its root folder, copy the templates to their project-specific names:
+PRODUCT.md answers who this is for, what it does, which platforms, what is out of scope, and what is fixed.
 
-   ```sh
-   cp PRODUCT.template.md PRODUCT.md
-   cp DESIGN.template.md DESIGN.md
-   ```
-
-   On Windows PowerShell, use:
-
-   ```powershell
-   Copy-Item PRODUCT.template.md PRODUCT.md
-   Copy-Item DESIGN.template.md DESIGN.md
-   ```
-
-5. Replace the prompts in `PRODUCT.md` and `DESIGN.md` with decisions for the new project.
-6. Keep `AGENTS.md` at the root so future work reads the shared instructions.
-
-If GitHub's template option is unavailable, create a new repository and copy these files into it instead.
-
-### In an existing project
-
-Copy `AGENTS.md`, `PRODUCT.template.md`, and `DESIGN.template.md` into the project root, then create `PRODUCT.md` and `DESIGN.md` as above. Review existing project conventions before replacing or merging any files with the same names.
-
-## Start a screen or game system
-
-Before implementation, make sure `PRODUCT.md` and `DESIGN.md` contain enough detail to guide the work. Then request one screen or game system at a time. Future work should follow `AGENTS.md`, avoid unrequested additions, and check the states, layouts, inputs, and target sizes relevant to that slice.
-
-The `*.template.md` files are reusable prompts. Keep them unchanged for future projects; record project decisions in the copied `PRODUCT.md` and `DESIGN.md` files.
-
----
-<img src="https://ghostchat.tech/icons/ghost-code-dev.png" width="20" height="20" alt="" align="top"> Built by [Ghost Code Dev](https://ghostchat.tech)
+DESIGN.md answers the visual direction, colour roles rather than hex lists, type scale, spacing, how inputs behave, and motion timing including reduced motion.
+The stop line is the whole point of that section. An unfilled template that gets built on anyway is the same trap as skip-while-draft: unverified work wearing the shape of waiting work.
