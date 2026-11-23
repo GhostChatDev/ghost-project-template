@@ -37,6 +37,12 @@ Copy this file to `DESIGN.md` at the start of a project. Replace the prompts wit
 - **Interaction principles:** How should navigation, selection, input, feedback, and confirmation behave?
 - **Motion purpose:** Which movements explain hierarchy, provide feedback, or support game feel? Which are decorative?
 - **Timing and easing:** Define useful duration and easing ranges for transitions, feedback, and repeated effects.
+- **One feeling in five words:** What single feeling should the motion communicate?
+- **One motion idea:** Which single movement should carry that feeling?
+- **One clock:** Which clock drives the timing? If BPM is used, state the frame rate too.
+- **Named spring damping:** Which spring and damping value are used, and what landing behavior is intended?
+- **Pixel sizes:** What pixel sizes must the subject and important elements meet?
+- **Seek check:** How will a cold seek to a frame be compared with reaching that frame sequentially?
 - **Interruption:** What happens when an action, page change, pause, or app interruption occurs during motion?
 - **Reduced motion:** Which system setting is respected? Replace nonessential movement with instant changes, opacity, or other low-motion feedback. Do not remove information, controls, or essential state changes. Avoid forced camera movement, parallax, flashing, and large zooms when reduced motion is enabled.
 

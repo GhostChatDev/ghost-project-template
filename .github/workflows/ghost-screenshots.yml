@@ -353,6 +353,35 @@ jobs:
             fi
             if npm run | grep -qE "^  build$"; then npm run build; fi
           fi
+      # The app's own tests. Nothing ran them unless the builder added a check for them: in the hard-ten test a
+      # booking build said its tests were "included" when there were none, and a point-of-sale build's tests failed
+      # and were never run. Skipped when another check file of the repository already runs them; the owner switches
+      # this step off with the repository variable GHOST_APP_TESTS = off.
+      - name: Run the app's own tests
+        if: vars.GHOST_APP_TESTS != 'off'
+        run: |
+          [ -f package.json ] || { echo "App tests: no package.json."; exit 0; }
+          script=$(node -e 'const s=(require("./package.json").scripts||{}).test||""; process.stdout.write(/no test specified/.test(s)?"":s)')
+          [ -n "$script" ] || { echo "App tests: package.json has no test script."; exit 0; }
+          other=$(grep -lsE '(npm|pnpm|yarn|bun)( run)? test|\b(vitest|jest|playwright test|node --test)\b' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null | grep -v '/ghost-' | head -1 || true)
+          if [ -n "$other" ]; then echo "App tests: already run by $other."; exit 0; fi
+          # Their own copy of the installed database: a test that empties a table must not empty the app the
+          # browser opens next.
+          if [ -n "$DATABASE_URL" ]; then
+            docker exec ghost-db psql -q -U postgres -c "select pg_terminate_backend(pid) from pg_stat_activity where datname = 'app' and pid <> pg_backend_pid()" >/dev/null
+            docker exec ghost-db psql -q -U postgres -c "create database ghost_tests template app"
+            export DATABASE_URL="postgresql://postgres:ghost@127.0.0.1:5432/ghost_tests" TEST_DATABASE_URL="postgresql://postgres:ghost@127.0.0.1:5432/ghost_tests"
+          fi
+          run="npm test"; [ -f pnpm-lock.yaml ] && run="pnpm test"; [ -f yarn.lock ] && run="yarn test"
+          echo "App tests: $run ($script)"
+          set +e
+          CI=true timeout 300 $run 2>&1 | tee "$RUNNER_TEMP/app-tests.log"; code=${PIPESTATUS[0]}
+          set -e
+          off="If they need something this check does not have (a key, another service), the repository's owner can switch this step off: repository variable GHOST_APP_TESTS = off."
+          if [ "$code" = 124 ]; then echo "FAIL: the app's own tests did not finish in 5 minutes. \"$run\" must run once and exit (no watch mode). $off"; exit 1; fi
+          if [ "$code" != 0 ]; then echo "FAIL: the app's own tests fail (\"$run\", exit $code). Fix the code or the test, whichever is wrong; a test is never deleted or skipped to get green. $off"; exit 1; fi
+          if grep -qE '^(#|ℹ) tests 0$|No tests? (files? )?found' "$RUNNER_TEMP/app-tests.log"; then echo "FAIL: \"$run\" ran no tests: the test script finds no test files. Write the tests the task asks for, or fix the script's path."; exit 1; fi
+          echo "App tests: passed."
       - name: Install a real browser
         run: |
           mkdir -p "$RUNNER_TEMP/shots" && cd "$RUNNER_TEMP/shots"

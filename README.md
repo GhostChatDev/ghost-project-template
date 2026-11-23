@@ -7,6 +7,7 @@ A documentation-only starting point for future apps and games. It helps each pro
 - `AGENTS.md` — shared working instructions for future implementation.
 - `PRODUCT.template.md` — prompts for the audience, purpose, platform, scope, and fixed constraints.
 - `DESIGN.template.md` — prompts for visual direction, color, typography, spacing, interaction, and motion, including game-specific timing and reduced motion.
+- `references/motion-stack/` — optional reference material, not a required dependency.
 - `LICENSE` — the repository license.
 
 ## Use this repository as a template

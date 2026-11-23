@@ -25,6 +25,10 @@ These instructions apply to apps and games built from this template. They define
 - For games, preserve the intended controls, game feel, timing, readability, and gameplay rules.
 - Prefer the simplest implementation that satisfies the current slice and is consistent with the existing codebase.
 
+## Motion stack
+
+Before animating a screen, game, or film, read `references/motion-stack/README.md` and fill the matching brief. Do not install a listed repository unless `PRODUCT.md` asks for it. A screenshot is not proof of motion.
+
 ## Check the result
 
 Before calling a slice complete, check what is relevant to that slice:
