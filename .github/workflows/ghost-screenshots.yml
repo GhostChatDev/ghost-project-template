@@ -382,11 +382,33 @@ jobs:
           if [ "$code" != 0 ]; then echo "FAIL: the app's own tests fail (\"$run\", exit $code). Fix the code or the test, whichever is wrong; a test is never deleted or skipped to get green. $off"; exit 1; fi
           if grep -qE '^(#|ℹ) tests 0$|No tests? (files? )?found' "$RUNNER_TEMP/app-tests.log"; then echo "FAIL: \"$run\" ran no tests: the test script finds no test files. Write the tests the task asks for, or fix the script's path."; exit 1; fi
           echo "App tests: passed."
+      # Keep the browser and its system packages between checks of this repository: the first check downloads them,
+      # later commits reuse them (the download alone took 20 s to over 100 s each time).
+      - name: Reuse the browser from earlier checks
+        id: browser-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/ghost-apt
+          key: ghost-browser-${{ runner.os }}-playwright-1.58.2
       - name: Install a real browser
         run: |
+          mkdir -p "$HOME/.cache/ghost-apt/partial"
+          printf 'Dir::Cache::Archives "%s/";\nAPT::Keep-Downloaded-Packages "true";\n' "$HOME/.cache/ghost-apt" | sudo tee /etc/apt/apt.conf.d/99ghost-cache >/dev/null
           mkdir -p "$RUNNER_TEMP/shots" && cd "$RUNNER_TEMP/shots"
           npm init -y >/dev/null && npm install playwright@1.58.2
           npx playwright install --with-deps chromium
+          sudo chown -R "$(id -u):$(id -g)" "$HOME/.cache/ghost-apt" || true
+          sudo rm -f "$HOME/.cache/ghost-apt/lock" || true
+      - name: Keep the browser for the next check
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/ghost-apt
+          key: ghost-browser-${{ runner.os }}-playwright-1.58.2
       - name: Photograph the app
         run: |
           cat > "$RUNNER_TEMP/shots/shots.mjs" <<'GHOST_SHOTS'
@@ -430,6 +452,8 @@ jobs:
             const dead = report.clicks.filter((c) => c.result === "does nothing").map((c) => "'" + c.label + "'");
             if (dead.length) fails.push((dead.length === 1 ? "this button does nothing when pressed: " : "these buttons do nothing when pressed: ") + dead.join(", ") + ". Make each one work (open, switch, add, filter...) or remove it");
             for (const c of report.clicks.filter((c) => c.result === "can't tell")) console.log("WARN: the button '" + c.label + "' changed nothing on the page (it may copy, download, share or print): make sure it does what its label says");
+            // A game's canvas that animates by itself hides whether a press changed it: reported, never failed.
+            for (const c of report.clicks.filter((c) => c.result === "moves by itself")) console.log("WARN: the button '" + c.label + "' changed nothing outside the game's picture, and the picture moves by itself, so the check can't tell whether it worked: make sure it does what its label says on the first screen");
             // The refresh test: something the user added must still be there in a new browser.
             if (report.refresh?.result === "lost") fails.push("something added in the app ('" + report.refresh.word + "', typed into the first text box) is gone after reopening the app in a new browser" + (report.refresh.server ? " with the server restarted (data kept only in the server's memory is lost: save it in the database)" : "") + ": save what people add (localStorage, IndexedDB or the app's database) and load it on start");
             if (report.refresh) console.log("REFRESH (this device remembers): " + report.refresh.result);
@@ -689,11 +713,56 @@ jobs:
             return r;
           };
 
+          // The page never finished opening: is the app's own script stuck (an endless loop)? Then pause it and say where, with
+          // the code, so it is fixed in one round instead of guessed at (a "could not open the app (Timeout)" took three paid
+          // rounds to trace to a MutationObserver that re-ran on its own changes). Null when the page isn't frozen.
+          // The debugger is switched on before the page opens (a frozen page can't switch it on any more); pausing still works.
+          const within = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
+          const watchScripts = async (context, page) => {
+            const w = { cdp: null, files: new Map() };
+            try {
+              w.cdp = await context.newCDPSession(page);
+              w.cdp.on("Debugger.scriptParsed", (s) => w.files.set(s.scriptId, { url: s.url, start: s.startLine || 0 }));
+              await within(w.cdp.send("Debugger.enable"), 5000);
+              await within(w.cdp.send("Debugger.setSkipAllPauses", { skip: true }), 5000); // a "debugger;" line in the app must not stop it
+            } catch {
+              w.cdp = null;
+            }
+            return w;
+          };
+          const stuckAt = async (page, w) => {
+            try {
+              const frozen = await within(page.evaluate(() => false).catch(() => false), 3000);
+              if (frozen === false || !w.cdp) return null;
+              const { cdp, files } = w;
+              await within(cdp.send("Debugger.setSkipAllPauses", { skip: false }).catch(() => null), 3000);
+              const paused = new Promise((r) => cdp.once("Debugger.paused", r));
+              await within(cdp.send("Debugger.pause").catch(() => null), 3000);
+              const ev = await within(paused, 3000);
+              if (!ev || !ev.callFrames.length) return "its own script never finishes (the page is frozen)";
+              const where = (f) => {
+                let file = (files.get(f.location.scriptId) || {}).url || "";
+                try { file = new URL(file).pathname; } catch {}
+                if (!file || file === "/") file = "index.html";
+                return file.replace(/^\//, "") + " line " + (f.location.lineNumber + 1);
+              };
+              const top = ev.callFrames[0];
+              const source = (await within(cdp.send("Debugger.getScriptSource", { scriptId: top.location.scriptId }).then((s) => (s.scriptSource.split("\n")[top.location.lineNumber - ((files.get(top.location.scriptId) || {}).start || 0)] || "").trim().slice(0, 200)).catch(() => ""), 3000)) || "";
+              const chain = ev.callFrames.slice(0, 4).map((f) => (f.functionName || (f === ev.callFrames[ev.callFrames.length - 1] ? "the page's script" : "an unnamed function")) + " (" + where(f) + ")").join(" <- ");
+              return "its own script never finishes: an endless loop at " + where(top) + (source ? ": " + source : "") + ". Running: " + chain + ". Often a watcher (MutationObserver, an event or a timer) that changes what it watches and so runs itself again; make it skip its own changes or stop watching while it updates";
+            } catch {
+              return null;
+            }
+          };
+
           const VIEWS = [["desktop", 1280, 800, false], ["tablet", 820, 1100, false], ["phone", 390, 844, true]];
           const browser = await chromium.launch();
+          let frozenPage = false; // a frozen page is frozen at every size: one report, no 20-second wait per size
           for (const [name, width, height, mobile] of VIEWS) {
+            if (frozenPage) break;
             const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile });
             const page = await context.newPage();
+            const scripts = name === "desktop" ? await watchScripts(context, page) : { cdp: null, files: new Map() };
             page.on("pageerror", (e) => report.page.push(name + ": " + e.message));
             page.on("console", (m) => { if (m.type() === "error" && !/favicon/i.test(m.text())) report.console.push(name + ": " + m.text().slice(0, 300)); });
             // While the first screen loads: an error from the app's OWN server (5xx) means the screen people open is an error
@@ -824,7 +893,7 @@ jobs:
                       // What a person would see change: the visible text (a number moves, a panel opens), how many
                       // things are visible (a menu or dialog appears), the address, or which option is picked (a category
                       // or tab that becomes the selected one only moves a highlight and a tick). A style that only flickers doesn't count.
-                      const sig = () => page.evaluate(() => {
+                      const SIG = () => {
                         let shown = 0;
                         let picked = "";
                         let i = 0;
@@ -838,7 +907,34 @@ jobs:
                           if (chosen || on.replace(/,/g, "")) picked += i + ":" + on + (chosen ? "+" : "") + ";";
                         }
                         return location.href + "|" + shown + "|" + picked + "|" + document.body.innerText;
-                      });
+                      };
+                      const sig = () => page.evaluate(SIG);
+                      // A game draws on a canvas: a press that turns the snake or starts the level changes only pixels,
+                      // which the page's text never shows (a snake game's working arrows were called dead). So the canvas
+                      // area is photographed too: before, after a wait with no press, and after the press. A canvas that
+                      // stays still until pressed and then changes did something; one that moves by itself (an animated
+                      // game) can't prove the press either way, so that is reported, not failed.
+                      const drawn = () => page.evaluate(() => {
+                        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+                        for (const c of document.querySelectorAll("canvas")) {
+                          const r = c.getBoundingClientRect();
+                          if (r.width < 12 || r.height < 12 || getComputedStyle(c).visibility === "hidden") continue;
+                          x0 = Math.min(x0, Math.max(0, r.left)); y0 = Math.min(y0, Math.max(0, r.top));
+                          x1 = Math.max(x1, Math.min(window.innerWidth, r.right)); y1 = Math.max(y1, Math.min(window.innerHeight, r.bottom));
+                        }
+                        return x1 - x0 >= 12 && y1 - y0 >= 12 ? { x: Math.floor(x0), y: Math.floor(y0), width: Math.floor(x1 - x0), height: Math.floor(y1 - y0) } : null;
+                      }).catch(() => null);
+                      const area = await drawn();
+                      const pic = async () => area ? (await page.screenshot({ clip: area, type: "png" }).catch(() => null)) : null;
+                      const same = (a, b) => Boolean(a && b && a.equals(b));
+                      let still = false;
+                      let before0 = null;
+                      if (area) {
+                        const p0 = await pic();
+                        await page.waitForTimeout(WAIT * 700);
+                        before0 = await pic();
+                        still = same(p0, before0);
+                      }
                       const before = await sig();
                       let dialog = false;
                       page.once("dialog", (d) => { dialog = true; d.dismiss().catch(() => {}); });
@@ -851,7 +947,39 @@ jobs:
                       await page.waitForTimeout(WAIT * 700);
                       const after = await sig().catch(() => "navigated");
                       const unseen = /copy|download|share|print|export|save as|install/i.test(label);
-                      report.clicks.push({ label, result: dialog || after !== before ? "works" : found.asking.includes(label) ? "asks for a field first" : unseen ? "can't tell" : "does nothing" });
+                      const afterPic = area && after === before ? await pic() : null;
+                      const redrawn = Boolean(area && still && afterPic && !same(before0, afterPic));
+                      const moving = Boolean(area && !still);
+                      let verdict = dialog || after !== before || redrawn ? "works" : found.asking.includes(label) ? "asks for a field first" : unseen ? "can't tell" : moving ? "moves by itself" : "does nothing";
+                      // A button that answers only a finger (touchstart: a game's on-screen pad) seems dead to a mouse click.
+                      // Before it is called dead, the page is opened once more as a touch screen and the button tapped: a tap
+                      // that changes the page (or a still game picture) counts. Errors on that page aren't counted, so this can
+                      // only clear a button, never fail one.
+                      if (verdict === "does nothing") {
+                        const tc = await browser.newContext({ viewport: { width, height }, hasTouch: true, serviceWorkers: "block" }).catch(() => null);
+                        if (tc) {
+                          try {
+                            const tp = await tc.newPage();
+                            await tp.goto(url, { waitUntil: "load", timeout: 20000 });
+                            await tp.waitForTimeout(WAIT * 500);
+                            const tpic = async () => area ? (await tp.screenshot({ clip: area, type: "png" }).catch(() => null)) : null;
+                            const t0 = await tpic();
+                            const tBefore = await tp.evaluate(SIG);
+                            const tt = tp.getByRole("button", { name: label, exact: true }).first();
+                            if (await tt.count()) await tt.tap({ timeout: 3000 });
+                            else await tp.getByText(label, { exact: true }).first().tap({ timeout: 3000 });
+                            await tp.waitForTimeout(WAIT * 700);
+                            const tAfter = await tp.evaluate(SIG).catch(() => "navigated");
+                            const t1 = tAfter === tBefore ? await tpic() : null;
+                            if (tAfter !== tBefore || (area && still && !same(t0, t1) && t0 && t1)) verdict = "works";
+                          } catch (e) {
+                            // a tap that couldn't be made leaves the mouse click's verdict
+                          } finally {
+                            await tc.close().catch(() => {});
+                          }
+                        }
+                      }
+                      report.clicks.push({ label, result: verdict });
                     } catch (e) {
                       report.clicks.push({ label, result: "could not be pressed" });
                     }
@@ -931,11 +1059,14 @@ jobs:
                 }
               }
             } catch (e) {
-              report.page.push(name + ": could not open the app (" + String(e.message).split("\n")[0] + ")");
+              const stuck = /Timeout/i.test(String(e.message)) ? await stuckAt(page, scripts) : null;
+              if (stuck) frozenPage = true;
+              report.page.push(name + ": could not open the app (" + (stuck ?? String(e.message).split("\n")[0]) + ")");
             }
-            await context.close();
+            if (scripts.cdp) await within(scripts.cdp.send("Debugger.disable").catch(() => null), 2000);
+            await within(context.close().catch(() => null), 10000); // a frozen page can hold up closing
           }
-          await browser.close();
+          await within(browser.close().catch(() => null), 10000);
           if (server) server.close();
           await finish();
 
