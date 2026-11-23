@@ -8,7 +8,7 @@ Optional references for how apps and games built from this template look, read a
 2. Fill the tokens at the top of `DESIGN.md` (colors, typography, spacing, rounded, motion, components) before writing interface code. The format is Google's open [DESIGN.md](https://github.com/google-labs-code/design.md) specification, so any agent can read it.
 3. Build one screen or one game system.
 4. Review it against `design-floor.md`, on the real rendered result at the sizes the project ships at.
-5. Pick tools only from `CATALOG.md`, and only when the project needs them. Charts and data tools are in `DATA.md`.
+5. Pick tools only from `CATALOG.md`, and only when the project needs them. Charts and data tools are in `DATA.md`; iPhone and Android skills and tools are in `MOBILE.md`.
 
 Optional check, when Node is available: `npx @google/design.md lint DESIGN.md` validates the tokens and reports contrast problems as JSON.
 
