@@ -29,6 +29,10 @@ These instructions apply to apps and games built from this template. They define
 
 Before animating a screen, game, or film, read `references/motion-stack/README.md` and fill the matching brief. Do not install a listed repository unless `PRODUCT.md` asks for it. A screenshot is not proof of motion.
 
+
+## Design kit
+
+Before designing a screen, read `references/design-kit/README.md`. Put exact values in the tokens at the top of `DESIGN.md` (Google's DESIGN.md format) before writing interface code, and review each finished screen against `references/design-kit/design-floor.md` on the rendered result. Pick icons, styling, chart and data tools only from `references/design-kit/CATALOG.md` `references/design-kit/DATA.md` and `references/design-kit/MOBILE.md`, and only when `PRODUCT.md` asks for them; respect the licence notes there. `DESIGN.md` wins over the design kit.
 ## Check the result
 
 Before calling a slice complete, check what is relevant to that slice:
