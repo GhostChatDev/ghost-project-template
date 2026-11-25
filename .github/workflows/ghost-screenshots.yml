@@ -11,15 +11,34 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Start a database (only when the app uses Postgres)
+      - name: What this commit is (app, static site, or no page yet)
         run: |
-          if { [ -f package.json ] && grep -qE '"(pg|postgres|@prisma/client|prisma|drizzle-orm|knex|sequelize|typeorm|@neondatabase/serverless|@vercel/postgres|@supabase/supabase-js)"' package.json; } || ls supabase/migrations/*.sql migrations/*.sql db/migrations/*.sql >/dev/null 2>&1; then
+          kind=docs
+          if [ -f package.json ] || ls supabase/migrations/*.sql migrations/*.sql db/migrations/*.sql 2>/dev/null | grep -q .; then kind=app
+          elif find . -maxdepth 5 \( -name .git -o -name node_modules -o -name .github -o -name ghost-screenshots \) -prune -o -type f \( -iname '*.html' -o -iname '*.htm' -o -iname '*.js' -o -iname '*.mjs' -o -iname '*.cjs' -o -iname '*.jsx' -o -iname '*.ts' -o -iname '*.tsx' -o -iname '*.css' -o -iname '*.scss' -o -iname '*.vue' -o -iname '*.svelte' -o -iname '*.astro' -o -iname '*.php' -o -iname '*.py' -o -iname '*.rb' -o -iname '*.go' \) -print | head -1 | grep -q .; then kind=static
+          fi
+          if [ "$kind" = static ]; then
+            for f in server.js server.mjs server.ts app.js index.js src/server.js src/server.ts src/index.js src/app.js; do
+              if grep -qs '[.]listen(' "$f"; then kind=app; fi
+            done
+          fi
+          echo "GHOST_KIND=$kind" >> "$GITHUB_ENV"
+          case "$kind" in
+            app) echo "What this commit is: an app (package.json, database changes or a server): the full check runs." ;;
+            static) echo "What this commit is: a static site (pages, no package.json, no server): no database, install or build; the folder is served and photographed." ;;
+            *) echo "What this commit is: no page or app yet (only documents): nothing to photograph." ;;
+          esac
+      - name: Start a database (only when the app uses Postgres)
+        if: env.GHOST_KIND == 'app'
+        run: |
+          if { [ -f package.json ] && grep -qE '"(pg|postgres|@prisma/client|prisma|drizzle-orm|knex|sequelize|typeorm|@neondatabase/serverless|@vercel/postgres|@supabase/supabase-js)"' package.json; } || ls supabase/migrations/*.sql migrations/*.sql db/migrations/*.sql 2>/dev/null | grep -q .; then
             docker run -d --name ghost-db -e POSTGRES_PASSWORD=ghost -e POSTGRES_DB=app -p 5432:5432 postgres:17-alpine >/dev/null
             for i in $(seq 1 40); do docker exec ghost-db pg_isready -U postgres -d app >/dev/null 2>&1 && break; sleep 1; done
             echo "DATABASE_URL=postgresql://postgres:ghost@127.0.0.1:5432/app" >> "$GITHUB_ENV"
             echo "Postgres is ready: DATABASE_URL is set for the build and the app's server."
           fi
       - name: Install the database changes in an empty database
+        if: env.GHOST_KIND == 'app'
         run: |
           PSQL="${PSQL:-docker exec -i ghost-db psql -q -U postgres -d app -v ON_ERROR_STOP=1}"
           files=""
@@ -187,6 +206,7 @@ jobs:
           fi
           echo "Installed $n database change file(s), each one on top of the earlier ones${total:+; rows in $filled of $total tables before the last one${skipped:+ (skipped: $skipped)}}; called $fntotal database function(s) once with empty input, undone: ok"
       - name: Upgrade a database like the live one (the main branch's changes, then this commit's new ones)
+        if: env.GHOST_KIND == 'app'
         run: |
           if [ -z "$DATABASE_URL" ]; then echo "Upgrade check: no database in this app."; exit 0; fi
           # What is already live: the main branch (on the main branch itself, the commit before this push).
@@ -338,6 +358,7 @@ jobs:
           echo "Upgrade check passed: $n new database change file(s) installed on top of the $m already on the main branch, with rows in $filled of $total tables${skipped:+ (could not fill: $skipped)}."
 
       - name: Install and build the app
+        if: env.GHOST_KIND == 'app'
         run: |
           echo "GHOST_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
           if [ -f package.json ]; then
@@ -358,7 +379,7 @@ jobs:
       # and were never run. Skipped when another check file of the repository already runs them; the owner switches
       # this step off with the repository variable GHOST_APP_TESTS = off.
       - name: Run the app's own tests
-        if: vars.GHOST_APP_TESTS != 'off'
+        if: env.GHOST_KIND == 'app' && vars.GHOST_APP_TESTS != 'off'
         run: |
           [ -f package.json ] || { echo "App tests: no package.json."; exit 0; }
           script=$(node -e 'const s=(require("./package.json").scripts||{}).test||""; process.stdout.write(/no test specified/.test(s)?"":s)')
@@ -385,6 +406,7 @@ jobs:
       # Keep the browser and its system packages between checks of this repository: the first check downloads them,
       # later commits reuse them (the download alone took 20 s to over 100 s each time).
       - name: Reuse the browser from earlier checks
+        if: env.GHOST_KIND != 'docs'
         id: browser-cache
         uses: actions/cache/restore@v4
         with:
@@ -393,6 +415,7 @@ jobs:
             ~/.cache/ghost-apt
           key: ghost-browser-${{ runner.os }}-playwright-1.58.2
       - name: Install a real browser
+        if: env.GHOST_KIND != 'docs'
         run: |
           mkdir -p "$HOME/.cache/ghost-apt/partial"
           printf 'Dir::Cache::Archives "%s/";\nAPT::Keep-Downloaded-Packages "true";\n' "$HOME/.cache/ghost-apt" | sudo tee /etc/apt/apt.conf.d/99ghost-cache >/dev/null
@@ -402,7 +425,7 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" "$HOME/.cache/ghost-apt" || true
           sudo rm -f "$HOME/.cache/ghost-apt/lock" || true
       - name: Keep the browser for the next check
-        if: steps.browser-cache.outputs.cache-hit != 'true'
+        if: env.GHOST_KIND != 'docs' && steps.browser-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |
@@ -411,9 +434,14 @@ jobs:
           key: ghost-browser-${{ runner.os }}-playwright-1.58.2
       - name: Photograph the app
         run: |
+          if [ "$GHOST_KIND" = docs ]; then
+            mkdir -p ghost-screenshots && echo '{"skipped":"nothing to photograph yet: this commit has no web page or app files (no index.html, no package.json, no page or script files)"}' > ghost-screenshots/report.json
+            echo "SKIPPED: nothing to photograph yet: this commit has no web page or app files (no index.html, no package.json, no page or script files). This is not a failure: the check passes until there is an app, and photographs it from the first commit that adds one."
+            exit 0
+          fi
           cat > "$RUNNER_TEMP/shots/shots.mjs" <<'GHOST_SHOTS'
           import http from "node:http";
-          import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
+          import { mkdir, readFile, readdir, writeFile, stat } from "node:fs/promises";
           import path from "node:path";
           import { spawn } from "node:child_process";
           import { chromium } from "playwright";
@@ -424,7 +452,8 @@ jobs:
           const OUT = path.join(BASE, "ghost-screenshots");
           const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".ico": "image/x-icon", ".woff": "font/woff", ".woff2": "font/woff2", ".txt": "text/plain", ".wasm": "application/wasm" };
           await mkdir(OUT, { recursive: true });
-          const report = { console: [], page: [], requests: [], overflow: {}, blank: [], views: [], menu: [], clicks: [], serverErrors: [], deadLinks: [] };
+          const report = { console: [], page: [], requests: [], overflow: {}, blank: [], views: [], menu: [], clicks: [], serverErrors: [], deadLinks: [], play: [] };
+          let phase = ""; // said with an uncaught error: what the check was doing (the play test)
           let serverOut = ""; // the app's own server output (npm start), shown when the check fails
           // A broken page fails the check (an uncaught error, a blank page, no app, a page that won't open), with
           // one FAIL: line each, so the fix loop reads what broke. Console errors, failed requests, sideways
@@ -439,6 +468,11 @@ jobs:
               if (report.login.result !== "ok" && !/^could not run|^login only/.test(report.login.result)) fails.push("the login doesn't work for a new person: " + report.login.result + ". The check signs up with an email and password, reloads, logs out, tries a wrong password and logs in again" + (report.login.steps.length ? " (it got as far as: " + report.login.steps.join(", ") + ")" : "") + ".");
             }
             for (const p of report.page) fails.push("uncaught error or page that won't open: " + p);
+            // The play test (a game): its Start must start the game, and playing must not throw (the errors above).
+            for (const p of report.play) {
+              console.log("PLAY (" + p.view + "): " + p.started + ", " + p.errors + " error(s) in 10 s of play" + (p.state ? ", window.game " + p.state : ""));
+              if (p.started === "did nothing") fails.push("the game's Start button did nothing (" + p.view + "): pressing it (a " + (p.view === "phone" ? "tap" : "click") + ") left the start screen up" + (p.state ? " and window.game unchanged" : "") + ". Start must start play on a click AND a tap (pointer or touch events, not only keys)");
+            }
             report.serverErrors = [...new Set(report.serverErrors || [])].slice(0, 6);
             if (report.serverErrors.length) fails.push("the app's own server answered with an error while the first screen loaded (" + report.serverErrors.join(", ") + "): the screen people open shows an error, not the app. Read SERVER OUTPUT below for why. This check gives the app a database when it uses one (DATABASE_URL) and nothing else: anything more the first screen needs (a key, a seeded row, another service) must have a working default, or the screen must work without it");
             for (const b of report.blank) fails.push(b + ": the page is blank (almost no text)");
@@ -459,6 +493,8 @@ jobs:
             if (report.refresh) console.log("REFRESH (this device remembers): " + report.refresh.result);
             // The cross-browser test: an app with a server must hold what people add on the server.
             if (report.crossBrowser) console.log("CROSS-BROWSER (the server holds it): " + report.crossBrowser.result);
+            if (report.signedOut) console.log("SIGNED OUT (a visitor who never signs in): " + report.signedOut.result);
+            if (report.signedOut && report.signedOut.result === "sees it") fails.push("a visitor who never signed in sees what a signed-in person added ('" + report.signedOut.word + "'): people's data must be shown only to them after they sign in (check the session on every request that reads it)");
             if (report.crossBrowser && report.crossBrowser.result === "not seen") fails.push("something added in the app ('" + report.crossBrowser.word + "') survives a refresh but a second, empty browser doesn't see it: it is kept only in the browser that added it. This app has a server: save what people add in its database through the server");
             const worked = report.clicks.filter((c) => c.result === "works" || c.result === "asks for a field first").length;
             if (report.clicks.length) console.log("CLICKS: " + worked + " of " + report.clicks.length + " buttons pressed did something");
@@ -511,6 +547,61 @@ jobs:
           };
           process.on("exit", () => { if (serverChild) { try { process.kill(-serverChild.pid, "SIGKILL"); } catch {} } });
           const pkg = await readFile(path.join(BASE, "package.json"), "utf8").then((t) => JSON.parse(t)).catch(() => null);
+
+          // Not the app: a native iPhone/Mac or Android app, whose web page (if any) is a separate page. Ai-Alarm-Clock, a Swift
+          // iPhone app with a stray index.html, had its real build fail while this check photographed that page and passed. A
+          // check named after the app must never pass for something that isn't the app, so that page is not photographed and
+          // the check does not pass. The same rule as lib/code/native-app.ts (keep the two in step): native project files at the
+          // root or one folder down; not when the native app is built from the web code (Capacitor, Cordova, Ionic, React
+          // Native, Expo, Tauri), or when the native project is only in a sub-folder of a web project that builds or serves
+          // itself. APP_DIR, set in the workflow, names the web app's folder: then that page is the app.
+          const SKIP_DIRS = ["node_modules", ".git", "Pods", "DerivedData", ".build", "build", "dist", "out", ".gradle", "ghost-screenshots"];
+          const HYBRID = ["@capacitor/core", "@capacitor/cli", "@capacitor/ios", "@capacitor/android", "cordova", "cordova-ios", "cordova-android", "@ionic/core", "@ionic/react", "@ionic/angular", "@ionic/vue", "react-native", "expo", "@tauri-apps/api", "@tauri-apps/cli"];
+          const nativeApp = async () => {
+            if (process.env.APP_DIR) return null;
+            const apple = [];
+            const gradle = [];
+            const look = async (dir, rel, depth) => {
+              const items = await readdir(dir, { withFileTypes: true }).catch(() => []);
+              for (const it of items) {
+                const name = rel + it.name;
+                if (/\.(xcodeproj|xcworkspace)$/.test(it.name) || (it.isFile() && (it.name === "Package.swift" || it.name === "project.yml"))) apple.push(name);
+                else if (it.isFile() && /^(build|settings)\.gradle(\.kts)?$/.test(it.name)) gradle.push(name);
+                else if (it.isDirectory() && depth === 0 && !SKIP_DIRS.includes(it.name)) await look(path.join(dir, it.name), name + "/", 1);
+              }
+            };
+            await look(BASE, "", 0);
+            // Gradle alone is any Java or Kotlin project (a Spring server too): Android needs its manifest.
+            const manifest = async (dir, depth) => {
+              if (depth > 4) return false;
+              const items = await readdir(dir, { withFileTypes: true }).catch(() => []);
+              if (items.some((it) => it.isFile() && it.name === "AndroidManifest.xml")) return true;
+              for (const it of items) if (it.isDirectory() && !SKIP_DIRS.includes(it.name) && (await manifest(path.join(dir, it.name), depth + 1))) return true;
+              return false;
+            };
+            const android = gradle.length > 0 && (await manifest(BASE, 0));
+            const markers = apple.concat(android ? gradle : []);
+            if (!markers.length) return null;
+            const deps = Object.assign({}, (pkg && pkg.dependencies) || {}, (pkg && pkg.devDependencies) || {});
+            if (HYBRID.some((d) => d in deps)) return null;
+            for (const f of ["capacitor.config.json", "capacitor.config.ts", "capacitor.config.js", "capacitor.config.mjs", "capacitor.config.cjs", "ionic.config.json", "config.xml"]) if (await has(path.join(BASE, f))) return null;
+            if (!markers.some((m) => !m.includes("/")) && pkg && pkg.scripts && (pkg.scripts.build || pkg.scripts.start)) return null;
+            markers.sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
+            return { platform: apple.length ? "iOS/macOS" : "Android", markers: markers.slice(0, 3) };
+          };
+          const notTheApp = await nativeApp();
+          if (notTheApp) {
+            let page = null;
+            for (const d of ["dist", "build", "out", ".", "docs", "public"]) {
+              if (await has(path.join(BASE, d, "index.html"))) { page = (d === "." ? "" : d + "/") + "index.html"; break; }
+            }
+            report.notTheApp = { platform: notTheApp.platform, markers: notTheApp.markers, page: page };
+            await writeFile(path.join(OUT, "report.json"), JSON.stringify(report, null, 2));
+            console.log("NOT THE APP: this repository's app is a native " + notTheApp.platform + " app (" + notTheApp.markers.join(", ") + "). This check opens a web page in a browser" + (page ? ", and the page here (" + page + ") is a separate page, not built from that app" : "") + ": a picture of it would say nothing about the app.");
+            console.log("FAIL: not the app. Nothing was photographed, and this check never passes for a native app: the app's own build check (Xcode or Gradle) is the one that counts. Ghost Code no longer adds this check to native apps: delete .github/workflows/ghost-screenshots.yml, or, if that web page really is the app, set APP_DIR to its folder in this workflow.");
+            process.exit(1);
+          }
+
           if (pkg && pkg.scripts && pkg.scripts.start && !process.env.GHOST_STATIC) {
             report.server = { command: "npm start", port: SERVER_PORT };
             const s = await startServer();
@@ -552,6 +643,25 @@ jobs:
             if (!d) continue;
             const dir = path.resolve(BASE, d);
             if (await has(path.join(dir, "index.html"))) { root = dir; break; }
+          }
+          // No app here yet (a stage of the task that only writes documents: no package.json and not one web file anywhere):
+          // nothing to photograph, and nothing is broken. Said plainly and passed, instead of failing every commit with "no
+          // index.html" and sending Ghost Code off to "fix" a check while it writes Markdown (ghost-media-video-crew: 5 red
+          // runs in a row on a docs-only stage). From the first commit that adds a page or an app, the check runs in full.
+          const WEB_EXT = [".html", ".htm", ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".css", ".scss", ".vue", ".svelte", ".astro", ".php", ".py", ".rb", ".go"];
+          const webFileIn = async (dir, depth) => {
+            const items = await readdir(dir, { withFileTypes: true }).catch(() => []);
+            for (const it of items) {
+              if (it.isFile() && WEB_EXT.some((e) => it.name.toLowerCase().endsWith(e))) return true;
+              if (it.isDirectory() && depth < 4 && !SKIP_DIRS.includes(it.name) && it.name !== ".github" && (await webFileIn(path.join(dir, it.name), depth + 1))) return true;
+            }
+            return false;
+          };
+          if (!root && !pkg && !process.env.APP_DIR && !(await webFileIn(BASE, 0))) {
+            report.skipped = "nothing to photograph yet: this commit has no web page or app files (no index.html, no package.json, no page or script files)";
+            await writeFile(path.join(OUT, "report.json"), JSON.stringify(report, null, 2));
+            console.log("SKIPPED: " + report.skipped + ". This is not a failure: the check passes until there is an app, and photographs it from the first commit that adds one.");
+            process.exit(0);
           }
           if (!root) {
             report.error = "no index.html found (looked in dist, build, out, the repository root, docs and public)";
@@ -755,6 +865,100 @@ jobs:
             }
           };
 
+          // A film, animation or game that starts at 0:00 (a Play button, a canvas, a <video>, a timeline like "0.00 / 15.00")
+          // photographed as it loads is a nearly black frame (seen on a 15-second film page). Before the picture: press its
+          // Play (or Start) button, seek a <video> or a timeline slider to about 45% of its length, or wait a moment (at most
+          // 2.5 s) so the picture shows real content. Only for pages that look like that; buttons, errors and the rest of the
+          // check are tested as before (each of those reloads the page first).
+          const FILM_SHARE = 0.45;
+          const toMidFilm = async (page) => {
+            const look = await page.evaluate(() => {
+              const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+              const text = (document.body ? document.body.innerText : "").slice(0, 4000);
+              const play = [...document.querySelectorAll("button, [role=button], a")].filter(vis).find((b) => /^\s*(?:▶|►|⏵)?\s*(?:play|start|watch|begin)\b|^\s*[▶►⏵]\s*$/i.test((b.innerText || b.getAttribute("aria-label") || b.title || "").trim()));
+              const video = [...document.querySelectorAll("video")].find((v) => vis(v));
+              const range = [...document.querySelectorAll("input[type=range]")].find((r) => vis(r));
+              const canvas = [...document.querySelectorAll("canvas")].some((c) => vis(c) && c.width * c.height > 20000);
+              const anims = typeof document.getAnimations === "function" ? document.getAnimations().length : 0;
+              const clock = /(\d+(?:[.:]\d+)?)\s*(?:s\b)?\s*\/\s*(\d+(?:[.:]\d+)?)\s*s?\b/.exec(text);
+              const secs = (t) => t.includes(":") ? t.split(":").reduce((a, b) => a * 60 + Number(b), 0) : Number(t);
+              const length = clock ? secs(clock[2]) : 0;
+              if (play) play.setAttribute("data-ghost-play", "1");
+              if (range) range.setAttribute("data-ghost-seek", "1");
+              return { play: Boolean(play), video: Boolean(video), range: Boolean(range), canvas, anims, length: length > 0 && length < 3600 ? length : 0 };
+            }).catch(() => null);
+            if (!look || !(look.play || look.video || look.canvas || look.anims > 0 || look.length)) return null;
+            const did = [];
+            if (look.play) {
+              await page.locator("[data-ghost-play]").first().click({ timeout: 3000 }).then(() => did.push("pressed Play"), () => {});
+              await page.waitForTimeout(WAIT * 300);
+            }
+            // Seek: a <video> to its middle, or the timeline slider (a range input) of a page with a Play button or a clock.
+            const seeked = await page.evaluate(([share, timeline]) => {
+              const v = [...document.querySelectorAll("video")].find((x) => Number.isFinite(x.duration) && x.duration > 0);
+              if (v) { v.currentTime = v.duration * share; return "video"; }
+              // A slider is a timeline only next to a Play button or a clock (never a volume or settings slider elsewhere).
+              const r = timeline ? document.querySelector("[data-ghost-seek]") : null;
+              if (r) {
+                const min = Number(r.min || 0), max = Number(r.max || 100);
+                const val = String(min + (max - min) * share);
+                const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+                set.call(r, val);
+                r.dispatchEvent(new Event("input", { bubbles: true }));
+                r.dispatchEvent(new Event("change", { bubbles: true }));
+                return "timeline";
+              }
+              return "";
+            }, [FILM_SHARE, Boolean(look.play || look.length)]).catch(() => "");
+            if (seeked) did.push("moved the " + seeked + " to " + Math.round(FILM_SHARE * 100) + "%");
+            // No seek: let it play partway (45% of the stated length, at most 2.5 s of real waiting).
+            const waitMs = seeked ? 500 : Math.min(2500, look.length ? look.length * 1000 * FILM_SHARE : 1500);
+            await page.waitForTimeout(WAIT * waitMs);
+            did.push("waited " + (WAIT * waitMs / 1000).toFixed(1) + " s");
+            return did.join(", ");
+          };
+
+          // THE PLAY TEST, for a game (a big canvas). Real runs: two shooters passed this check and then threw "Cannot read
+          // properties of undefined" the first time a shot hit an enemy, and one game's Start button did nothing; pressing
+          // each button once never got that far. So the game is started (its Start button, clicked or tapped) and played
+          // for 10 seconds: fire held and moving side to side with the keys on a computer, tapping the canvas on a phone,
+          // pressing through "next level" or "play again". An uncaught error while playing fails like any other; a Start
+          // that leaves the start screen up fails. window.game, when the game keeps its state there, is read before and after.
+          const isGame = (page) => page.evaluate(() => [...document.querySelectorAll("canvas")].some((c) => { const r = c.getBoundingClientRect(); return r.width * r.height > 40000; })).catch(() => false);
+          const gameState = (page) => page.evaluate(() => { try { const g = window.game; return g && typeof g === "object" ? JSON.stringify({ screen: g.screen ?? g.state ?? null, level: g.level ?? null, score: g.score ?? null }) : null; } catch (e) { return null; } }).catch(() => null);
+          const playGame = async (page, name, mobile) => {
+            const errorsBefore = report.page.length;
+            await page.goto(url, { waitUntil: "load", timeout: 20000 });
+            await page.waitForTimeout(WAIT * 800);
+            const before = await gameState(page);
+            const start = page.getByRole("button", { name: /^\s*(start|play|new game|begin)/i }).filter({ visible: true }).first();
+            let started = "no Start button (pressed Enter and Space)";
+            phase = " (while playing the game for 10 s)";
+            if (await start.count().catch(() => 0)) {
+              if (mobile) await start.tap({ timeout: 3000 }).catch(() => {}); else await start.click({ timeout: 3000 }).catch(() => {});
+              await page.waitForTimeout(WAIT * 700);
+              const stillThere = await start.isVisible().catch(() => false);
+              const after = await gameState(page);
+              started = (before !== null ? after === before : stillThere) ? "did nothing" : "started";
+            } else {
+              await page.keyboard.press("Enter").catch(() => {});
+              await page.keyboard.press("Space").catch(() => {});
+            }
+            const box = await page.locator("canvas").first().boundingBox().catch(() => null);
+            const t0 = Date.now();
+            if (!mobile) await page.keyboard.down("Space").catch(() => {});
+            while (Date.now() - t0 < 10000) {
+              if (mobile && box) await page.touchscreen.tap(box.x + box.width * (0.2 + Math.random() * 0.6), box.y + box.height * 0.8).catch(() => {});
+              else for (const k of ["ArrowLeft", "ArrowRight"]) { await page.keyboard.down(k).catch(() => {}); await page.waitForTimeout(250); await page.keyboard.up(k).catch(() => {}); }
+              const next = page.getByRole("button", { name: /next|continue|level|restart|play again|try again/i }).filter({ visible: true }).first();
+              if (await next.count().catch(() => 0)) await next.click({ timeout: 1000 }).catch(() => {});
+              await page.waitForTimeout(200);
+            }
+            if (!mobile) await page.keyboard.up("Space").catch(() => {});
+            phase = "";
+            return { view: name, started, errors: report.page.length - errorsBefore, state: await gameState(page) };
+          };
+
           const VIEWS = [["desktop", 1280, 800, false], ["tablet", 820, 1100, false], ["phone", 390, 844, true]];
           const browser = await chromium.launch();
           let frozenPage = false; // a frozen page is frozen at every size: one report, no 20-second wait per size
@@ -763,7 +967,7 @@ jobs:
             const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile });
             const page = await context.newPage();
             const scripts = name === "desktop" ? await watchScripts(context, page) : { cdp: null, files: new Map() };
-            page.on("pageerror", (e) => report.page.push(name + ": " + e.message));
+            page.on("pageerror", (e) => report.page.push(name + phase + ": " + e.message));
             page.on("console", (m) => { if (m.type() === "error" && !/favicon/i.test(m.text())) report.console.push(name + ": " + m.text().slice(0, 300)); });
             // While the first screen loads: an error from the app's OWN server (5xx) means the screen people open is an error
             // message, not the app. That fails the check (a kanban build was green on "Could not load board": every picture
@@ -776,12 +980,98 @@ jobs:
             try {
               await page.goto(url, { waitUntil: "load", timeout: 20000 });
               await page.waitForTimeout(WAIT * 1500);
-              const info = await page.evaluate(() => ({ h: document.documentElement.scrollHeight, over: document.documentElement.scrollWidth - window.innerWidth, text: (document.body ? document.body.innerText : "").trim().length }));
+              // Blank: almost no text AND nothing drawn. A film or a picture page shows a few words over shapes (a 15-second
+              // film made of 30 coloured shapes and one caption was failed as "blank"): visible pictures (img, svg, video) or
+              // at least 3 visible painted boxes count as something to see. A canvas alone doesn't (a game that never drew
+              // still has its canvas). Text and boxes count only where they can be seen: inside the page and inside every
+              // ancestor that clips (overflow other than visible). A real run's film page was 960 px wide in a body of
+              // "overflow: hidden": on a phone the whole film sat below the body's edge, the screenshot was one flat colour,
+              // and the check passed because the words were still in the page's text.
+              const measure = () => page.evaluate(() => {
+                const clipOf = (el) => {
+                  let box = { l: 0, t: 0, r: Math.max(document.documentElement.scrollWidth, window.innerWidth), b: Math.max(document.documentElement.scrollHeight, window.innerHeight) };
+                  for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
+                    const s = getComputedStyle(a);
+                    if (s.overflowX !== "visible" || s.overflowY !== "visible") {
+                      const r = a.getBoundingClientRect();
+                      box = { l: Math.max(box.l, r.left), t: Math.max(box.t, r.top), r: Math.min(box.r, r.right), b: Math.min(box.b, r.bottom) };
+                    }
+                  }
+                  return box;
+                };
+                const inside = (r, el, min) => { const c = clipOf(el); return Math.min(r.right, c.r) - Math.max(r.left, c.l) >= min && Math.min(r.bottom, c.b) - Math.max(r.top, c.t) >= min; };
+                const shown = (el) => { const s = getComputedStyle(el); return s.visibility !== "hidden" && Number(s.opacity) !== 0; };
+                let drawn = 0;
+                for (const el of document.querySelectorAll("body *")) {
+                  if (drawn >= 3) break;
+                  if (!inside(el.getBoundingClientRect(), el, 8) || !shown(el)) continue;
+                  const s = getComputedStyle(el);
+                  if (/^(IMG|SVG|VIDEO)$/i.test(el.tagName)) drawn = 3;
+                  else if (el.tagName === "CANVAS") {
+                    // A canvas counts when it shows a picture (3+ colours, sampled small), not for being there: a film drawn
+                    // on a canvas with its words on it was failed as "blank" (a real run), and a game that never drew still is.
+                    try {
+                      const small = document.createElement("canvas");
+                      small.width = small.height = 24;
+                      const g = small.getContext("2d");
+                      g.drawImage(el, 0, 0, 24, 24);
+                      const d = g.getImageData(0, 0, 24, 24).data;
+                      const colours = new Set();
+                      for (let i = 0; i < d.length; i += 4) colours.add(((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4));
+                      if (colours.size >= 3) drawn = 3;
+                    } catch (e) {
+                      // a canvas the page can't read back: it decides nothing
+                    }
+                  }
+                  else if ((s.backgroundColor !== "rgba(0, 0, 0, 0)" && s.backgroundColor !== "transparent") || s.backgroundImage !== "none") drawn++;
+                }
+                let text = 0;
+                if (document.body) {
+                  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                  for (let n = walk.nextNode(); n && text < 20; n = walk.nextNode()) {
+                    const t = (n.textContent || "").trim();
+                    if (!t || !n.parentElement || !shown(n.parentElement)) continue;
+                    const range = document.createRange();
+                    range.selectNodeContents(n);
+                    if (inside(range.getBoundingClientRect(), n.parentElement, 1)) text += t.length;
+                  }
+                }
+                return { h: document.documentElement.scrollHeight, over: document.documentElement.scrollWidth - window.innerWidth, text, drawn };
+              });
+              const info = await measure();
               if (info.over > 2) report.overflow[name] = info.over;
-              if (info.text < 20) report.blank.push(name);
+              if (info.text < 20 && info.drawn < 3) report.blank.push(name);
               await page.setViewportSize({ width, height: Math.min(Math.max(info.h, 600), 1800) });
               await page.waitForTimeout(WAIT * 400);
+              // A film or animation: photographed partway through, not at its black first frame.
+              const film = await toMidFilm(page).catch(() => null);
+              if (film) {
+                report.film = report.film || {};
+                report.film[name] = film;
+                if (name === "desktop") console.log("FILM: the page animates, so the picture is taken partway through (" + film + ")");
+              }
               const jpg = await page.screenshot({ type: "jpeg", quality: 60 });
+              // The picture itself decides too, when almost no words can be seen at the moment it is taken: a screen where under
+              // 0.2% of it differs from its main colour shows nothing, whatever boxes the page has. (Not on a page with words in
+              // view: one short line on a tall white phone screen is under 0.2% too, and it is not blank.) A real film's 960 px stage sat outside a phone's "overflow: hidden"
+              // body: its words and boxes were "there", the phone picture was one flat dark colour, and the check passed.
+              if (!report.blank.includes(name) && (await measure().catch(() => ({ text: 99 }))).text < 20) {
+                const share = await page.evaluate(async (b64) => {
+                  const img = new Image();
+                  img.src = "data:image/jpeg;base64," + b64;
+                  await img.decode();
+                  const c = document.createElement("canvas");
+                  c.width = 200;
+                  c.height = Math.max(1, Math.round((200 * img.height) / img.width));
+                  const g = c.getContext("2d");
+                  g.drawImage(img, 0, 0, c.width, c.height);
+                  const d = g.getImageData(0, 0, c.width, c.height).data;
+                  const count = new Map();
+                  for (let i = 0; i < d.length; i += 4) { const k = ((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3); count.set(k, (count.get(k) || 0) + 1); }
+                  return 1 - Math.max(...count.values()) / (d.length / 4);
+                }, jpg.toString("base64")).catch(() => null);
+                if (share !== null && share < 0.002) report.blank.push(name);
+              }
               await writeFile(path.join(OUT, name + ".jpg"), jpg);
               await writeFile(path.join(OUT, name + ".thumb.jpg"), await thumbOf(context, jpg));
               firstScreen = false;
@@ -795,6 +1085,8 @@ jobs:
                 }
               }
 
+              // The play test on a phone (taps): after its pictures, so they show the first screen.
+              if (name === "phone" && (await isGame(page))) report.play.push(await playGame(page, name, mobile).catch((e) => { phase = ""; return { view: name, started: "could not run (" + String(e.message).split("\n")[0] + ")", errors: 0, state: null }; }));
               // The other screens: up to three items of the menu (sidebar, nav bar or tabs), opened one at a time on desktop.
               // A menu item that opens nothing, or a page that errors, shows up in the pictures and in the report.
               if (name === "desktop") {
@@ -988,6 +1280,8 @@ jobs:
                   report.menu.push("desktop: the click test could not run (" + String(e.message).split("\n")[0] + ")");
                 }
 
+                // The play test (above) on a computer (keys); the phone's is before the menu.
+                if (await isGame(page)) report.play.push(await playGame(page, name, mobile).catch((e) => { phase = ""; return { view: name, started: "could not run (" + String(e.message).split("\n")[0] + ")", errors: 0, state: null }; }));
                 // The refresh test: type a unique word into the first text box, add it, and see whether it shows on the
                 // page. If it does, open the app again in a NEW browser (no memory, no service worker), carrying over only
                 // what the app saved (cookies, localStorage, IndexedDB), and check the word is still there.
@@ -1000,14 +1294,29 @@ jobs:
                   const boxes = page.locator("input:not([type]), input[type='text'], textarea").filter({ visible: true });
                   let box = boxes.first();
                   let found = false;
-                  for (let b = 0; b < Math.min(await boxes.count(), 8); b++) {
-                    const isSearch = await boxes.nth(b).evaluate((el) => {
-                      const hint = ((el.placeholder || "") + " " + (el.getAttribute("aria-label") || "") + " " + (el.name || "") + " " + (el.id || "")).toLowerCase();
-                      // A sign-in box (email, user name) isn't somewhere to add things: typing there signs in as that name.
-                      const signIn = el.type === "email" || /^(email|username)$/.test(el.getAttribute("autocomplete") || "") || /e-?mail|user ?name|log ?in|sign ?in|password/.test(hint);
-                      return signIn || Boolean(el.closest("[role='search'], .search, .searchbox, .search-bar, .filters")) || /search|find|filter|look ?up/.test(hint);
-                    }).catch(() => false);
-                    if (!isSearch) { box = boxes.nth(b); found = true; break; }
+                  const findBox = async () => {
+                    for (let b = 0; b < Math.min(await boxes.count(), 8); b++) {
+                      const isSearch = await boxes.nth(b).evaluate((el) => {
+                        const hint = ((el.placeholder || "") + " " + (el.getAttribute("aria-label") || "") + " " + (el.name || "") + " " + (el.id || "")).toLowerCase();
+                        // A sign-in box (email, user name) isn't somewhere to add things: typing there signs in as that name.
+                        const signIn = el.type === "email" || /^(email|username)$/.test(el.getAttribute("autocomplete") || "") || /e-?mail|user ?name|log ?in|sign ?in|password/.test(hint);
+                        return signIn || Boolean(el.closest("[role='search'], .search, .searchbox, .search-bar, .filters")) || /search|find|filter|look ?up/.test(hint);
+                      }).catch(() => false);
+                      if (!isSearch) { box = boxes.nth(b); found = true; return; }
+                    }
+                  };
+                  await findBox();
+                  // No box on the screen: the app may open its form with a button ("New note", "Add", "+"), often in a dialog.
+                  // A real notes app with sign-in kept its editor behind "New note", so the add, refresh and second-browser
+                  // tests never ran and the check passed with its privacy untested.
+                  if (!found) {
+                    // "New note", "+ New note", "Add", "+" ("+" is not a word character, so it is matched on its own).
+                    const opener = page.getByRole("button", { name: /^\s*(\+\s*)?((new|add|create|write|compose)\b|$)/i }).filter({ visible: true }).first();
+                    if (await opener.count().catch(() => 0)) {
+                      await opener.click({ timeout: 3000 }).catch(() => {});
+                      await page.waitForTimeout(WAIT * 500);
+                      await findBox();
+                    }
                   }
                   if (!found) report.refresh = { result: "no text box to add something with" };
                   else {
@@ -1036,7 +1345,15 @@ jobs:
                       const again = await fresh.newPage();
                       await again.goto(url, { waitUntil: "load", timeout: 20000 });
                       await again.waitForTimeout(WAIT * 1200);
-                      report.refresh = { result: (await shows(again)) ? "kept" : "lost", word: MARK, server: Boolean(restarted) };
+                      // Signed out by the restart (sessions kept in the server's memory): sign in again as the same test
+                      // person before looking. A real notes app's saved note was reported "lost" because the reopened app
+                      // showed its sign-in screen, not the notes.
+                      let relogged = false;
+                      if (!(await shows(again)) && report.login?.result === "ok" && (await signInScreen(again))) {
+                        relogged = await logIn(again, CREDS.pass).catch(() => false);
+                        await again.waitForTimeout(WAIT * 1200);
+                      }
+                      report.refresh = { result: (await shows(again)) ? "kept" : "lost", word: MARK, server: Boolean(restarted), ...(relogged ? { signedInAgain: true } : {}) };
                       await fresh.close();
                       // The cross-browser test (apps with a server only; a separate result from the refresh test): is
                       // what was added held by the server, or only by that browser? Open the app in a second, empty
@@ -1051,6 +1368,17 @@ jobs:
                         const seen = await shows(op);
                         report.crossBrowser = { result: seen ? "seen" : (await signInScreen(op)) ? "private (the other browser is signed out)" : "not seen", word: MARK };
                         await other.close();
+                        // An app with accounts: a visitor who never signs in must not see what a signed-in person added.
+                        // (The test above signs the same person in on the other browser, so a leak to everyone was never
+                        // looked for.)
+                        if (report.login && report.login.result === "ok") {
+                          const anon = await browser.newContext({ viewport: { width, height }, serviceWorkers: "block" });
+                          const ap = await anon.newPage();
+                          await ap.goto(url, { waitUntil: "load", timeout: 20000 });
+                          await ap.waitForTimeout(WAIT * 1200);
+                          report.signedOut = { result: (await shows(ap)) ? "sees it" : "private", word: MARK };
+                          await anon.close();
+                        }
                       }
                     }
                   }
